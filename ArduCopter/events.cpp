@@ -523,3 +523,56 @@ void Copter::do_failsafe_action(FailsafeAction action, ModeReason reason){
 #endif
 }
 
+void Copter::failsafe_tanksprayer_on_event(void){
+    // attempt to switch to RTL, if this fails then switch to Land
+    if (!set_mode(Mode::Number::RTL, ModeReason::TANKEMPTY)) {
+        // set mode to land will trigger mode change notification to pilot
+        gcs().send_text(MAV_SEVERITY_WARNING,"Tank Failsafe Occured, Change Mode Error! Please set RTL Mannually.");
+    } else {
+        // alert pilot to mode change
+        gcs().send_text(MAV_SEVERITY_WARNING, "Sprayer Tank Empty Failsafe - Returning to Home");
+        AP_Notify::events.failsafe_mode_change = 1;
+    }
+}
+
+void Copter::failsafe_sprayerlevelcheck(){
+
+    bool _sensor_state = 0;
+
+    // check if we found the pump or not
+    if (!pump_found_over_can) {
+#if HAL_ENABLE_DRONECAN_DRIVERS
+        // check if we found the pump over UAVCAN
+        pump_found_over_can = esc_telem.pump_found_status();
+        sprayer.pump_found = pump_found_over_can;
+#endif
+
+    }
+
+    if (pump_found_over_can) {
+#if HAL_ENABLE_DRONECAN_DRIVERS
+        _sensor_state = sprayer.failsafe_check_pump();
+#endif       
+    }// } else if (sprayer.sensor_type() == 1) {
+    //     _sensor_state = fmeter.check_tank();
+    // } else if (!sprayer.sensor_type() && sprayer.en_tfs_status()) {
+    //     _sensor_state = sprayer.failsafe_tankempty_check();
+    // }
+    
+    const uint32_t last_tfs_update_ms =  millis() - failsafe.last_tfs_check_ms;
+
+    if (last_tfs_update_ms > FS_TFS_TIMEOUT_MS && failsafe.sprayertank) {
+        // Recovery from a sprayer tank failsafe
+        set_failsafe_sprayertank(false);
+
+    } else if (last_tfs_update_ms < FS_TFS_TIMEOUT_MS && failsafe.sprayertank) {
+        // No problem, do nothing
+    } else if ((last_tfs_update_ms > FS_TFS_TIMEOUT_MS) && (!failsafe.sprayertank) && (_sensor_state)) {
+        if (sprayer.en_tfs_status()) {
+            sprayer.set_master(false);
+            sprayer.stop_spray();
+            set_failsafe_sprayertank(true);
+            failsafe_tanksprayer_on_event();
+        }
+    }
+}

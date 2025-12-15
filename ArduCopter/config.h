@@ -619,3 +619,8 @@
 #ifndef USER_PARAMS_ENABLED
   #define USER_PARAMS_ENABLED 0
 #endif
+
+// Tank Failsafe
+#ifndef FS_TFS_TIMEOUT_MS
+ # define FS_TFS_TIMEOUT_MS             2000    // Tank Failsafe triggers after 2 seconds
+#endif

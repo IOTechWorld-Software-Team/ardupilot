@@ -21,6 +21,7 @@
 #include <inttypes.h>
 #include <AP_Common/AP_Common.h>
 #include <AP_Param/AP_Param.h>
+#include "AP_UAVCAN_TF.h"
 
 #define AC_SPRAYER_DEFAULT_PUMP_RATE        10.0f   ///< default quantity of spray per meter travelled
 #define AC_SPRAYER_DEFAULT_PUMP_MIN         0       ///< default minimum pump speed expressed as a percentage from 0 to 100
@@ -28,7 +29,7 @@
 #define AC_SPRAYER_DEFAULT_SPEED_MIN        100     ///< we must be travelling at least 1m/s to begin spraying
 #define AC_SPRAYER_DEFAULT_TURN_ON_DELAY    100     ///< delay between when we reach the minimum speed and we begin spraying.  This reduces the likelihood of constantly turning on/off the pump
 #define AC_SPRAYER_DEFAULT_SHUT_OFF_DELAY   1000    ///< shut-off delay in milli seconds.  This reduces the likelihood of constantly turning on/off the pump
-
+#define AC_SPRAYER_DEFAULT_TFS_EN           0       ///< Enable or Disable TankFailsafe
 /// @class  AC_Sprayer
 /// @brief  Object managing a crop sprayer comprised of a spinner and a pump both controlled by pwm
 class AC_Sprayer {
@@ -61,6 +62,21 @@ public:
     /// update - adjusts servo positions based on speed and requested quantity
     void update();
 
+    bool en_tfs_status(void);
+    ///set and reset Master Switch values
+    void set_master(bool true_false);
+    void set_master_status(bool flag) {_master = flag;}
+    uint8_t sensor_type() {return _sensor_type;}
+    void stop_spray() {stop_spraying();}
+
+    bool failsafe_check_pump();
+
+    AP_UAVCAN_TF tf_uavcan;
+
+    AP_Float      _tank_water_litre;
+    bool pump_found = false;
+    float currentf;
+
     static const struct AP_Param::GroupInfo var_info[];
 
 private:
@@ -71,6 +87,10 @@ private:
     AP_Int8         _pump_min_pct;          ///< minimum pump rate (expressed as a percentage from 0 to 100)
     AP_Int16        _spinner_pwm;           ///< pwm rate of spinner
     AP_Float        _speed_min;             ///< minimum speed in cm/s above which the sprayer will be started
+    AP_Int8         _run_mode;              ///< check for the run mode mainly to calibrate the pump
+    AP_Float        _cal_value;
+    AP_Int8         _sensor_type;           ///< sensor type for tank failsafe
+    AP_Int8         _en_tfs;                ///< Enable or Disable Tank Failsafe
 
     /// flag bitmask
     struct sprayer_flags_type {
@@ -84,6 +104,8 @@ private:
     uint32_t        _speed_under_min_time;  ///< time at which we fell below speed minimum
 
     void stop_spraying();
+    bool            _master = true;  
+    bool first_time = true;
 };
 
 namespace AP {

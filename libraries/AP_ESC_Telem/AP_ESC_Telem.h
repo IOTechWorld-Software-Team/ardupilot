@@ -14,6 +14,7 @@ static_assert(ESC_TELEM_MAX_ESCS > 0, "Cannot have 0 ESC telemetry instances");
 
 #define ESC_TELEM_DATA_TIMEOUT_MS 5000UL
 #define ESC_RPM_DATA_TIMEOUT_US 1000000UL
+#define PUMP_INDEX      9
 
 class AP_ESC_Telem {
 public:
@@ -131,6 +132,27 @@ public:
     void set_rpm_scale(const uint8_t esc_index, const float scale_factor);
 #endif
 
+        struct ESC_Status{
+        // FieldTypes
+        uint32_t   error_count;                   // bit len 32
+        float      voltage;                       // float16 Saturate
+        float      current;                       // float16 Saturate
+        float      temperature;                   // float16 Saturate
+        int32_t    rpm;                           // bit len 18
+        uint8_t    power_rating_pct;              // bit len 7
+        uint8_t    esc_index;                     // bit len 5
+        bool       healthy;
+        uint32_t   last_time_millis;
+    };
+
+    HAL_Semaphore esc_sem;
+
+    ESC_Status esc_get_pump_data(uint8_t index);
+    ESC_Status esc_arr[10]{0};
+
+    void pump_found(bool flag) { _pump_found = flag;};
+    bool pump_found_status();
+
 private:
 
     // helper that validates RPM data
@@ -161,6 +183,7 @@ private:
     bool _have_data;
 
     AP_Int8 mavlink_offset;
+    bool _pump_found = false;
 
     static AP_ESC_Telem *_singleton;
 };

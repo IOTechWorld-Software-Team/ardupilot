@@ -442,6 +442,9 @@ void AP_DroneCAN::init(uint8_t driver_index, bool enable_filters)
     arming_status.set_timeout_ms(20);
     arming_status.set_priority(CANARD_TRANSFER_PRIORITY_LOW);
 
+    pump_vesc.set_timeout_ms(20);
+    pump_vesc.set_priority(CANARD_TRANSFER_PRIORITY_LOWEST);
+
 #if AP_DRONECAN_SEND_GPS
     gnss_fix2.set_timeout_ms(20);
     gnss_fix2.set_priority(CANARD_TRANSFER_PRIORITY_LOW);
@@ -540,6 +543,7 @@ void AP_DroneCAN::loop(void)
         send_parameter_save_request();
         send_node_status();
         _dna_server.verify_nodes();
+        send_pump_data();
 
 #if AP_DRONECAN_SEND_GPS && AP_GPS_DRONECAN_ENABLED
         if (option_is_set(AP_DroneCAN::Options::SEND_GNSS) && !AP_GPS_DroneCAN::instance_exists(this)) {
@@ -1501,6 +1505,33 @@ void AP_DroneCAN::handle_ESC_status(const CanardRxTransfer& transfer, const uavc
 #endif
         );
 #endif // HAL_WITH_ESC_TELEM
+        
+    AP_ESC_Telem *esc_telem = AP_ESC_Telem::get_singleton();
+    if (esc_telem == nullptr)
+    {
+        return;
+    }
+    {
+        WITH_SEMAPHORE(esc_telem->esc_sem);
+
+    //     // reserve the ESC INDEX 9 for the TANK Failsafe - for now
+        if (msg.esc_index == PUMP_INDEX) {
+            // pump is found change the tank failsafe type to built-in tanksafe in esc
+            // once it is found that value will that instance cannot be switched to another tank-faisafe option
+            esc_telem->pump_found(true);
+        }
+
+        esc_telem->esc_arr[msg.esc_index].esc_index = msg.esc_index;
+        esc_telem->esc_arr[msg.esc_index].voltage = msg.voltage*100;
+        esc_telem->esc_arr[msg.esc_index].current = msg.current;
+        esc_telem->esc_arr[msg.esc_index].temperature = msg.temperature;
+        esc_telem->esc_arr[msg.esc_index].rpm = msg.rpm;
+        esc_telem->esc_arr[msg.esc_index].power_rating_pct = msg.power_rating_pct;
+        esc_telem->esc_arr[msg.esc_index].healthy = true;
+        esc_telem->esc_arr[msg.esc_index].last_time_millis = AP_HAL::millis();
+        esc_telem->esc_arr[msg.esc_index].error_count = msg.error_count;
+
+    }
 }
 
 #if AP_EXTENDED_ESC_TELEM_ENABLED
@@ -2018,5 +2049,35 @@ bool AP_DroneCAN::write_aux_frame(AP_HAL::CANFrame &out_frame, const uint32_t ti
     }
     return canard_iface.write_aux_frame(out_frame, timeout_us);
 }
+
+void AP_DroneCAN::pump_vesc_send(uint8_t run, float calibration_value, float extra1, float extra2)
+{
+    WITH_SEMAPHORE(_pump_out_sem);
+    _pump_vesc.run = run;
+    _pump_vesc.calirated_value = calibration_value;
+    _pump_vesc.extra1 = extra1;
+    _pump_vesc.extra2 = extra2;
+}
+
+void AP_DroneCAN::send_pump_data()
+{
+    static uint32_t my_time = AP_HAL::millis();
+    if (AP_HAL::millis() - my_time < 1000) {
+        return;
+    }
+    my_time = AP_HAL::millis();
+
+    ardupilot_equipment_pump_PumpVesc msg;
+    {
+        WITH_SEMAPHORE(_pump_out_sem);
+        msg.run = _pump_vesc.run;
+        msg.calibration_value = _pump_vesc.calirated_value;
+        msg.value1 = _pump_vesc.extra1;
+        msg.value2 = _pump_vesc.extra2;
+    }
+
+    pump_vesc.broadcast(msg);
+}
+
 
 #endif // HAL_NUM_CAN_IFACES

@@ -740,6 +740,8 @@ void Copter::three_hz_loop()
 
     // check if avoidance should be enabled based on alt
     low_alt_avoidance();
+
+    failsafe_sprayerlevelcheck();
 }
 
 // ap_value calculates a 32-bit bitmask representing various pieces of

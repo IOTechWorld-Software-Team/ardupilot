@@ -1,0 +1,9 @@
+#
+# Generic PUMP status.
+# Unknown fields should be set to NAN.
+#
+
+uint32 run          # Resets when the motor restarts
+float32 calibration_value   # Pump calibrate value
+float32 value1               # reserved value 1
+float32 value2               # reserved value 2

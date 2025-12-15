@@ -407,6 +407,7 @@ private:
     struct {
         uint32_t terrain_first_failure_ms;  // the first time terrain data access failed - used to calculate the duration of the failure
         uint32_t terrain_last_failure_ms;   // the most recent time terrain data access failed
+        uint32_t last_tfs_check_ms;         // The most recent time tankfailsafe was updated
 
         int8_t radio_counter;            // number of iterations with throttle below throttle_fs_value
 
@@ -416,6 +417,7 @@ private:
         uint8_t terrain             : 1; // true if the missing terrain data failsafe has occurred
         uint8_t adsb                : 1; // true if an adsb related failsafe has occurred
         uint8_t deadreckon          : 1; // true if a dead reckoning failsafe has triggered
+        uint8_t sprayertank         : 1; // True if tank is empty
     } failsafe;
 
     bool any_failsafe_triggered() const {
@@ -666,6 +668,8 @@ private:
     void set_failsafe_gcs(bool b);
     void update_using_interlock();
 
+    void set_failsafe_sprayertank(bool b);
+
     // Copter.cpp
     void get_scheduler_tasks(const AP_Scheduler::Task *&tasks,
                              uint8_t &task_count,
@@ -824,6 +828,9 @@ private:
     bool should_disarm_on_failsafe();
     void do_failsafe_action(FailsafeAction action, ModeReason reason);
     void announce_failsafe(const char *type, const char *action_undertaken=nullptr);
+
+    void failsafe_sprayerlevelcheck();
+    void failsafe_tanksprayer_on_event();
 
     // failsafe.cpp
     void failsafe_enable();
@@ -1109,6 +1116,8 @@ private:
 
     bool started_rate_thread;
     bool using_rate_thread;
+    // AP_ESC_Telem esc_telem;
+    bool pump_found_over_can = false;
 
 public:
     void failsafe_check();      // failsafe.cpp

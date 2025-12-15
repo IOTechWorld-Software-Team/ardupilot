@@ -126,6 +126,8 @@ public:
     // THIS IS NOT A THREAD SAFE API!
     void send_reboot_request(uint8_t node_id);
 
+    void pump_vesc_send(uint8_t run, float calibration_value, float extra1, float extra2);
+
     // get or set param value
     // returns true on success, false on failure
     // failures occur when waiting on node to respond to previous get or set request
@@ -315,6 +317,7 @@ private:
     Canard::Publisher<ardupilot_indication_SafetyState> safety_state{canard_iface};
     Canard::Publisher<uavcan_equipment_safety_ArmingStatus> arming_status{canard_iface};
     Canard::Publisher<ardupilot_indication_NotifyState> notify_state{canard_iface};
+    Canard::Publisher<ardupilot_equipment_pump_PumpVesc> pump_vesc{canard_iface};
 
 #if AP_DRONECAN_HIMARK_SERVO_SUPPORT
     Canard::Publisher<com_himark_servo_ServoCmd> himark_out{canard_iface};
@@ -433,6 +436,15 @@ private:
     void handle_param_get_set_response(const CanardRxTransfer& transfer, const uavcan_protocol_param_GetSetResponse& rsp);
     void handle_param_save_response(const CanardRxTransfer& transfer, const uavcan_protocol_param_ExecuteOpcodeResponse& rsp);
     void handle_node_info_request(const CanardRxTransfer& transfer, const uavcan_protocol_GetNodeInfoRequest& req);
+    void send_pump_data();
+
+    struct pump_vesc_s {
+        uint8_t run;
+        float calirated_value;
+        float extra1;
+        float extra2;
+    }_pump_vesc;
+    HAL_Semaphore _pump_out_sem;
 
 #if AP_SCRIPTING_ENABLED
     void handle_FlexDebug(const CanardRxTransfer& transfer, const dronecan_protocol_FlexDebug& msg);

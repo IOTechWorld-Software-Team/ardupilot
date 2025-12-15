@@ -143,6 +143,7 @@ public:
         bool video_recording;     // true when the vehicle is recording video
         bool temp_cal_running;    // true if a temperature calibration is running
         bool gyro_calibrated;     // true if calibrated gyro/acc
+        bool failsafe_sprayertank; // true if tank failsafe occured
     };
 
     /// notify_events_type - bitmask of active events.

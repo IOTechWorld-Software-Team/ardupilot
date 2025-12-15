@@ -91,3 +91,13 @@ void Copter::update_using_interlock()
     ap.using_interlock = rc().find_channel_for_option(RC_Channel::AUX_FUNC::MOTOR_INTERLOCK) != nullptr;
 #endif
 }
+
+
+void Copter::set_failsafe_sprayertank(bool b)
+{
+    failsafe.last_tfs_check_ms = millis();
+    failsafe.sprayertank = b;
+
+    // update AP_Notify
+    AP_Notify::flags.failsafe_sprayertank = b;
+}

@@ -852,6 +852,19 @@ void AP_ESC_Telem::set_rpm_scale(const uint8_t esc_index, const float scale_fact
 }
 #endif
 
+
+bool AP_ESC_Telem::pump_found_status()
+{
+    WITH_SEMAPHORE(esc_sem);
+    return _pump_found;
+}
+
+AP_ESC_Telem::ESC_Status AP_ESC_Telem::esc_get_pump_data(uint8_t index){
+    WITH_SEMAPHORE(esc_sem);
+    return  esc_arr[index];
+}
+
+
 AP_ESC_Telem *AP_ESC_Telem::_singleton = nullptr;
 
 /*
